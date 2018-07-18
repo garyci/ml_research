@@ -33,6 +33,8 @@ class DssmModel(object):
         self.l2_reg_lambda = 0.001
         self.activation_function = activation_function
         self.epoch_steps = epoch_steps
+        self.query_dim = 0.00
+        self.doc_dim = 0.00
         ################################
         ## input layer
         # Shape [BS, TRIGRAM_D].  BS是batch大小，TRIGRAM_D输入维度的大小
@@ -70,17 +72,17 @@ class DssmModel(object):
         ################################
         ## multi-layer nonlinear projection
         for dim in range(1, len(self.dim_layer) ):
-            query_dim = tf.matmul(self.query_act[-1], self.weight_list[dim-1]) + self.bias_list[dim-1]
-            doc_dim = tf.matmul(self.doc_act[-1], self.weight_list[dim-1]) + self.bias_list[dim-1]
+            self.query_dim = tf.matmul(self.query_act[-1], self.weight_list[dim-1]) + self.bias_list[dim-1]
+            self.doc_dim = tf.matmul(self.doc_act[-1], self.weight_list[dim-1]) + self.bias_list[dim-1]
             if self.activation_function is None:
-                self.query_act.append( query_dim )
-                self.doc_act.append( doc_dim )
+                self.query_act.append( self.query_dim )
+                self.doc_act.append( self.doc_dim )
             else:
                 if dim == len(self.dim_layer) - 1:
-                    self.query_act.append( self.activation_function(query_dim,name='query_doc') )
+                    self.query_act.append( self.activation_function(self.query_dim,name='query_doc') )
                 else:
-                    self.query_act.append( self.activation_function(query_dim) )
-                self.doc_act.append( self.activation_function(doc_dim) )
+                    self.query_act.append( self.activation_function(self.query_dim) )
+                self.doc_act.append( self.activation_function(self.doc_dim) )
         ################################
         ## negative sampling layer
         with tf.name_scope('fd-rotate'):

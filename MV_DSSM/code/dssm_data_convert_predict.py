@@ -13,7 +13,7 @@ from collections import Counter
 #预测时使用，即预测时，会带着did uuid
 #训练时，没有did 和 uuid
 
-class DssmData(object):
+class DssmDataPredict(object):
     # 构造函数
     # ======================================================
     def __init__(self,source_path=None,
@@ -96,13 +96,13 @@ class DssmData(object):
 
     # 特征编码主函数
     # ======================================================
-    def convert_to_vector(self,train_file,batch_num):
+    def convert_to_vector(self,predict_file,batch_num,dssm_model,sess):
         print('generation sparse train/test vector list ...')
         start = time.time()
         # train_d_col,train_q_col,test_d_col,test_q_col = [],[],[],[]
         did_uuid_list,did_vec_list,uuid_vec_list = [],[] ,[]
         #not cache instead of reading file readline for each
-        f=open(train_file,'r')
+        f=open(predict_file,'r')
         line = f.readline()
         while line:
             lines=line.split()
@@ -132,7 +132,23 @@ class DssmData(object):
             self.csr_matrix_query_test = self.dump_matrix(query_idx,vec_list_q, "query_test")
             self.csr_matrix_doc_test = self.dump_matrix(doc_idx,vec_list_d, "doc_test")
 
-            result_vec_query,result_vec_uuid = self.load_model_predict("model_path",self.csr_matrix_query_train,self.csr_matrix_doc_train )
+            print("===1===",str(self.csr_matrix_query_train))
+            query_in,doc_in=self.pull_batch(1,self.csr_matrix_query_train,self.csr_matrix_doc_train,0)
+            print("===2===",str(query_in))
+            batch_data_dict = {
+                dssm_model.query_batch: query_in,
+                dssm_model.doc_batch: doc_in
+            }
+            loss_v, correct_pred_v, softmax_prob, cos_sim,query_dim,doc_dim = sess.run(
+                [dssm_model.loss,
+                 dssm_model.correct_prediction,
+                 dssm_model.softmax_prob,
+                 dssm_model.cos_sim,
+                 dssm_model.query_dim,
+                 dssm_model.doc_dim],
+                feed_dict=batch_data_dict)
+
+            result_vec_query,result_vec_uuid = query_dim,doc_dim
             did_vec_list.append(str(did) + "\t" + str(result_vec_query))
             if len(did_vec_list) > batch_num:
                 self.save_result_did_uuid('did_vec.txt', did_vec_list)
@@ -148,7 +164,7 @@ class DssmData(object):
         self.save_result_did_uuid('did_vec.txt', did_vec_list)
         self.save_result_did_uuid('uuid_vec.txt', uuid_vec_list)
 
-        print("total time for sparse conversion : %-3.3fs" % ( time.time() - start )) 
+        print("total time for sparse conversion : %-3.3fs" % ( time.time() - start ))
 
 
 
@@ -262,13 +278,13 @@ class DssmData(object):
     def main(self):
         start = time.time()
         self.load_vocabulary_file('word2idx.txt')
-        self.convert_to_vector("a.txt",2)
+        # self.convert_to_vector("b.txt",2)
         self.assert_dimension()
         print("total time for main data preprocession pipeline: %-3.3fs" % ( time.time() - start ) )
         #print(self.csr_matrix_query_train)
 
 
 if __name__ == "__main__":
-    dssmData = DssmData()
+    dssmData = DssmDataPredict()
     dssmData.main()
 
