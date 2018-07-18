@@ -148,7 +148,15 @@ class DssmDataPredict(object):
                  dssm_model.doc_dim],
                 feed_dict=batch_data_dict)
 
-            result_vec_query,result_vec_uuid = query_dim,doc_dim
+            query_dim_save = ""
+            for d in query_dim[0]:
+                query_dim_save += str(d)+","
+
+            doc_dim_save = ""
+            for d in doc_dim[0]:
+                doc_dim_save += str(d)+","
+
+            result_vec_query,result_vec_uuid = query_dim_save,doc_dim_save
             did_vec_list.append(str(did) + "\t" + str(result_vec_query))
             if len(did_vec_list) > batch_num:
                 self.save_result_did_uuid('did_vec.txt', did_vec_list)
